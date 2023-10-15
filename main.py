@@ -99,14 +99,14 @@ def main():
                 user_message = f'{st.session_state.locations}에서의 {st.session_state.industry}업종'
 
                 with st.spinner("응답 생성중..."):
-                    response = RAG.make_summarize(user_message, db)
+                    response = RAG.generate_response(user_message)
 
                 # msg = response.choices[0].message
                 # Adding the assistant's response to the list of messages
                 st.session_state.messages.append(
                     {"role": "assistant", "content": response})
                 # Displaying the assistant's response on the main page
-                st.chat_message("assistant").write(msg.content)
+                st.chat_message("assistant").write(response)
 
                 st.session_state.first_trial = False
     else:
