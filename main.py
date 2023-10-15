@@ -71,7 +71,7 @@ def main():
                 """
             },
             {"role": "assistant", "content": """분석을 진행할 상권과 업종을 알려주시면 상권 분석을 도와드리겠습니다.
-             먼저 분석을 원하는 행정동을 입력해주세요"""}]  # 유저에게 가장 먼저 던지는 메세지
+            먼저 분석을 원하는 행정동을 입력해주세요"""}]  # 유저에게 가장 먼저 던지는 메세지
         st.session_state.first_trial = True
 
     # Displaying the list of messages on the main page
