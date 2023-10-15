@@ -16,7 +16,7 @@ db = None
 def initialize_db():
     global db
     if db is None:
-        file_path = "./data/업종요약.csv"
+        file_path = "./data/업종요약_new.csv"
 
         # Check if the file exists
         if not os.path.exists(file_path):
@@ -70,7 +70,8 @@ def main():
                 All questions and answers will be conducted in Korean.
                 """
             },
-            {"role": "assistant", "content": "분석을 진행할 상권과 업종을 알려주시면 상권 분석을 도와드리겠습니다. 먼저 분석을 원하는 행정동을 입력해주세요"}]  # 유저에게 가장 먼저 던지는 메세지
+            {"role": "assistant", "content": """분석을 진행할 상권과 업종을 알려주시면 상권 분석을 도와드리겠습니다.
+             먼저 분석을 원하는 행정동을 입력해주세요"""}]  # 유저에게 가장 먼저 던지는 메세지
         st.session_state.first_trial = True
 
     # Displaying the list of messages on the main page
@@ -96,15 +97,14 @@ def main():
                 st.session_state.messages.append(
                     {"role": "user", "content": user_input})
                 user_message = f'{st.session_state.locations}에서의 {st.session_state.industry}업종'
-                prompt = RAG.make_template(user_message, db)
-                print(prompt)
-                with st.spinner("응답 생성중..."):
-                    response = openai.ChatCompletion.create(
-                        model="gpt-3.5-turbo-0613", messages=st.session_state.messages, temperature=0)
 
-                msg = response.choices[0].message
+                with st.spinner("응답 생성중..."):
+                    response = RAG.make_summarize(user_message, db)
+
+                # msg = response.choices[0].message
                 # Adding the assistant's response to the list of messages
-                st.session_state.messages.append(msg)
+                st.session_state.messages.append(
+                    {"role": "assistant", "content": response})
                 # Displaying the assistant's response on the main page
                 st.chat_message("assistant").write(msg.content)
 

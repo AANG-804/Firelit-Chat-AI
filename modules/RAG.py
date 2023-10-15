@@ -2,6 +2,8 @@ from langchain.document_loaders.csv_loader import CSVLoader
 from langchain.vectorstores import FAISS
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.prompts import PromptTemplate
+from langchain.chat_models import ChatOpenAI
+from langchain.chains import LLMChain
 import os
 
 # 1. Vectorise the sales response csv data
@@ -19,10 +21,18 @@ def retrieve_info(query, db):
     return page_contents_array
 
 
+def generate_response(message, vectorized_data, chain):
+    response = chain.run(
+        message=message, vectorized_data=vectorized_data)
+    return response
+
 # 3. Setup LLMChain & prompts
-def make_template(message, db):  # Ensure the database is initialized
+
+
+def make_summarize(message, db):  # Ensure the database is initialized
+
     vectorized_data = retrieve_info(message, db)
-    template = f"""
+    template = """
     You need to derive business insights based on the summary information in the page_contents_array. You should answer referring to this best_practice or in the same format.
     You will follow ALL of the rules below:
 
@@ -38,4 +48,17 @@ def make_template(message, db):  # Ensure the database is initialized
 
     Please write the best response that I should send to this prospect:
     """
-    return template
+
+    llm = ChatOpenAI(temperature=0, model="gpt-3.5-turbo-16k-0613")
+
+    prompt = PromptTemplate(
+        input_variables=["message", "vectorized_data"],
+        template=template
+    )
+
+    chain = LLMChain(llm=llm, prompt=prompt)
+
+    response = chain.run(
+        message=message, vectorized_data=vectorized_data)
+
+    return response
