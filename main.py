@@ -2,12 +2,42 @@
 import openai
 import streamlit as st
 import os  # Importing the OS library to interact with the operating system
+import time
 from dotenv import load_dotenv  # Importing the function to load .env variables
+
+from langchain.document_loaders.csv_loader import CSVLoader
+from langchain.vectorstores import FAISS
+from langchain.embeddings.openai import OpenAIEmbeddings
+
 from modules import RAG
+
+db = None
+
+
+def initialize_db():
+    global db
+    if db is None:
+        file_path = "./data/업종요약.csv"
+
+        # Check if the file exists
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(
+                f"The file {file_path} does not exist. Please check the path.")
+
+        try:
+            loader = CSVLoader(file_path=file_path, encoding="utf-8-sig")
+            documents = loader.load()
+        except Exception as e:
+            raise RuntimeError(
+                f"Error loading {file_path}. Ensure it is a valid CSV file.") from e
+
+        embeddings = OpenAIEmbeddings()
+        db = FAISS.from_documents(documents, embeddings)
 
 
 def init():
     load_dotenv()
+    initialize_db()
     if os.getenv("OPENAI_API_KEY") is None or os.getenv("OPENAI_API_KEY") == "":
         print("OPENAI_API_KEY is not set")
         exit(1)
@@ -35,46 +65,77 @@ def main():
         st.session_state.messages = [
             {  # 프롬프트 엔지니어링 하는 부분
                 "role": "system",
-                "content":
-                    "You are an expert of a market analysis in restaurant field. You'll be able to communicate accurate,\
-                    informed analysis in an easy-to-understand manner to people who want to start a business in the catering sector.\
-                    You must be straightforward and responsive to customers, and avoid using ambiguous language.\
-                    Answers should include appropriate comparision with other district.\
-                    and also you should follow the rules bellow\
-                    **important rules \
-                    1/ Answer the user's request within 200 tokens unconditionally\
-                    2/ If you don't have enough tokens for the response, ask the user to enter '계속하기'",
+                "content": """
+                You are a skilled expert in market analysis for the food and beverage industry. 
+                You can interpret data accurately to derive business insights and can effectively convey the analysis results to many people. 
+                All questions and answers will be conducted in Korean.
+                """
             },
-            {"role": "assistant", "content": "창업을 하기 위해서는 상권분석, 입지분석, 점포분석의 과정으로 이루어져있어요. 어떻게 도와드릴까요?"}]  # 유저에게 가장 먼저 던지는 메세지
+            {"role": "assistant", "content": "분석을 진행할 상권과 업종을 알려주시면 상권 분석을 도와드리겠습니다. 먼저 분석을 원하는 행정동을 입력해주세요"}]  # 유저에게 가장 먼저 던지는 메세지
+        st.session_state.first_trial = True
 
     # Displaying the list of messages on the main page
     for msg in st.session_state.messages[1:]:
         st.chat_message(msg["role"]).write(msg["content"])
 
-    # Taking chat input from the user
-    if prompt := st.chat_input():
-        # Displaying the user's message on the main page
-        st.chat_message("user").write(prompt)
+    if st.session_state.first_trial:
+        # 상권을 선택하게 만들기
+        if "locations" not in st.session_state:
+            if user_input := st.chat_input():
+                st.chat_message("user").write(user_input)
+                st.session_state.locations = user_input
+                st.session_state.messages.append(
+                    {"role": "user", "content": user_input})
+                st.session_state.messages.append(
+                    {"role": "assistant", "content": "감사합니다! 이번엔 분석할 업종을 입력해주세요!"})
+                st.chat_message("assistant").write(
+                    "감사합니다! 이번엔 분석할 업종을 입력해주세요!")
+        elif "industry" not in st.session_state:
+            if user_input := st.chat_input():
+                st.chat_message("user").write(user_input)
+                st.session_state.industry = user_input
+                st.session_state.messages.append(
+                    {"role": "user", "content": user_input})
+                user_message = f'{st.session_state.locations}에서의 {st.session_state.industry}업종'
+                prompt = RAG.make_template(user_message, db)
+                print(prompt)
+                with st.spinner("응답 생성중..."):
+                    response = openai.ChatCompletion.create(
+                        model="gpt-3.5-turbo-0613", messages=st.session_state.messages, temperature=0)
 
-        # 유저 입력, prompt 처리하기 <- 우리가 원하는 형태를 정제할 수 있음 RAG를 하는 부분
-        pass
+                msg = response.choices[0].message
+                # Adding the assistant's response to the list of messages
+                st.session_state.messages.append(msg)
+                # Displaying the assistant's response on the main page
+                st.chat_message("assistant").write(msg.content)
 
-        # Adding the user's message to the list of messages
-        st.session_state.messages.append({"role": "user", "content": prompt})
+                st.session_state.first_trial = False
+    else:
+        # Taking chat input from the user
+        if user_input := st.chat_input():
+            # Displaying the user's message on the main page
+            st.chat_message("user").write(user_input)
 
-        # Making a request to OpenAI's API to get a response based on the list of messages
-        with st.spinner("응답 생성중..."):
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo-0613", messages=st.session_state.messages, max_tokens=400, temperature=0)
+            # 유저 입력(user_input), prompt 처리하기 <- 우리가 원하는 형태를 정제할 수 있음 RAG를 하는 부분
+            prompt = user_input
 
-        # Extracting the assistant's response from the API response
-        msg = response.choices[0].message
+            # Adding the user's message to the list of messages
+            st.session_state.messages.append(
+                {"role": "user", "content": prompt})
 
-        # Adding the assistant's response to the list of messages
-        st.session_state.messages.append(msg)
+            # Making a request to OpenAI's API to get a response based on the list of messages
+            with st.spinner("응답 생성중..."):
+                response = openai.ChatCompletion.create(
+                    model="gpt-3.5-turbo-0613", messages=st.session_state.messages, max_tokens=400, temperature=0)
 
-        # Displaying the assistant's response on the main page
-        st.chat_message("assistant").write(msg.content)
+            # Extracting the assistant's response from the API response
+            msg = response.choices[0].message
+
+            # Adding the assistant's response to the list of messages
+            st.session_state.messages.append(msg)
+
+            # Displaying the assistant's response on the main page
+            st.chat_message("assistant").write(msg.content)
 
 
 if __name__ == "__main__":
