@@ -1,4 +1,3 @@
-# Importing necessary libraries
 import openai
 import streamlit as st
 import os  # Importing the OS library to interact with the operating system
