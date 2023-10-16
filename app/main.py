@@ -16,7 +16,7 @@ from modules import RAG
 
 def initialize_db():
     if "db" not in st.session_state:
-        file_path = "./data/업종요약_new.csv"
+        file_path = "app/data/업종요약_new.csv"
 
         # Check if the file exists
         if not os.path.exists(file_path):
@@ -102,7 +102,7 @@ def main():
              "업종": ["한식", "일식", "중식", "카페", "치킨"]}))
 
     # 폰트 설정
-    with open("style.css") as css:
+    with open("app/style.css") as css:
         st.markdown(f'<style>{css.read()}</style>', unsafe_allow_html=True)
 
     if st.session_state.first_trial:
