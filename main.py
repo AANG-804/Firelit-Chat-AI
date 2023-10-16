@@ -86,9 +86,10 @@ def main():
     for msg in st.session_state.messages[1:]:
         st.chat_message(msg["role"]).write(msg["content"])
 
+    # Sidebar에 사용설명 추가
     with st.sidebar:
         st.header("🤷‍♂️Firelit ChatAI Beta 사용설명", divider='rainbow')
-        st.text(
+        st.write(
             """
             현재 저희 챗봇은 Beta 버전으로 기능 구현 중에 있습니다.\n
             🚨주의🚨 \n
@@ -96,9 +97,13 @@ def main():
             2. 현재 분석 가능한 행정동, 업종은 다음과 같습니다.
             """
         )
-        st.table(pd.DataFrame(
+        st.write(pd.DataFrame(
             {"행정동": ['장전동', '청룡동', '노포동', '부곡동', '구서동'],
              "업종": ["한식", "일식", "중식", "카페", "치킨"]}))
+
+    # 폰트 설정
+    with open("style.css") as css:
+        st.markdown(f'<style>{css.read()}</style>', unsafe_allow_html=True)
 
     if st.session_state.first_trial:
         # 상권을 선택하게 만들기
