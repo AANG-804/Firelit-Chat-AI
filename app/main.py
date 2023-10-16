@@ -4,7 +4,6 @@ import streamlit as st
 import pandas as pd
 
 import os  # Importing the OS library to interact with the operating system
-import time
 from dotenv import load_dotenv  # Importing the function to load .env variables
 
 from langchain.document_loaders.csv_loader import CSVLoader
@@ -35,16 +34,15 @@ def initialize_db():
 
 
 def init():
-    # .env파일을 환경변수로 읽어드림
-    load_dotenv()
+
     initialize_db()
 
-    if os.getenv("OPENAI_API_KEY") is None or os.getenv("OPENAI_API_KEY") == "":
+    if os.environ["OPENAI_API_KEY"] is None or os.environ["OPENAI_API_KEY"] == "":
         print("OPENAI_API_KEY is not set")
         exit(1)
     else:
         print("API Key is set!")
-        st.session_state.openai_api_key = os.getenv("OPENAI_API_KEY")
+        st.session_state.openai_api_key = os.environ["OPENAI_API_KEY"]
         openai.api_key = st.session_state.openai_api_key  # Set the OpenAI API key
 
     st.set_page_config(
