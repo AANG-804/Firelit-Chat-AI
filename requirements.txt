@@ -5,6 +5,7 @@
 #    pip-compile requirements.in
 #
 aiohttp==3.8.6
+tiktoken
     # via
     #   langchain
     #   openai
