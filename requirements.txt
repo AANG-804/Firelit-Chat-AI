@@ -16,6 +16,7 @@ altair==5.1.2
 annotated-types==0.6.0
     # via pydantic
 anyio==3.7.1
+faiss-cpu
     # via langchain
 async-timeout==4.0.3
     # via
